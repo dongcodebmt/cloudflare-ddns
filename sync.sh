@@ -22,12 +22,12 @@ a_record_update () {
 		-H "Authorization: Bearer $cloudflare_api_token" \
 		-H "Content-Type: application/json")
 	if [[ $dns_record == *"\"count\":0"* ]]; then
-		echo "$(date): Please create A record with IP ${ipv4} for ${cloudflare_record_name}!"
+		echo "$(get_date): Please create A record with IP ${ipv4} for ${cloudflare_record_name}!"
 		return
 	fi
 	old_ipv4=$(echo $dns_record | sed -E "s/.*\"content\":\"($ip_regex)\".*/\1/")
 	if [ $ipv4 == $old_ipv4 ]; then
-		echo "$(date): A record has not change!"
+		echo "$(get_date): A record has not change!"
 		return
 	fi
 	a_record_id=$(echo "$dns_record" | sed -E 's/.*"id":"(\w+)".*/\1/')
@@ -36,10 +36,10 @@ a_record_update () {
 		-H "Content-Type: application/json" \
 		--data "{\"type\":\"A\",\"name\":\"$cloudflare_record_name\",\"content\":\"$ipv4\",\"ttl\":1,\"proxied\":false}")
 	if [[ $dns_update == *"\"success\":false"* ]]; then
-		echo "$(date): A record update failed!"
+		echo "$(get_date): Updating A record to ${ipv4} failed!"
 		return
 	fi
-	echo "$(date): A record updated successfully!"
+	echo "$(get_date): Updating A record to ${ipv4} was successful!"
 }
 
 aaaa_record_update () {
@@ -53,12 +53,12 @@ aaaa_record_update () {
 		-H "Authorization: Bearer $cloudflare_api_token" \
 		-H "Content-Type: application/json")
 	if [[ $dns_record == *"\"count\":0"* ]]; then
-		echo "$(date): Please create AAAA record with IP ${ipv6} for ${cloudflare_record_name}!"
+		echo "$(get_date): Please create AAAA record with IP ${ipv6} for ${cloudflare_record_name}!"
 		return
 	fi
 	old_ipv6=$(echo $dns_record | sed -E "s/.*\"content\":\"($ip_regex)\".*/\1/")
 	if [ $ipv6 == $old_ipv6 ]; then
-		echo "$(date): AAAA record has not change"
+		echo "$(get_date): AAAA record has not change!"
 		return
 	fi
 	aaaa_record_id=$(echo "$dns_record" | sed -E 's/.*"id":"(\w+)".*/\1/')
@@ -67,23 +67,27 @@ aaaa_record_update () {
 		-H "Content-Type: application/json" \
 		--data "{\"type\":\"AAAA\",\"name\":\"$cloudflare_record_name\",\"content\":\"$ipv6\",\"ttl\":1,\"proxied\":false}")
 	if [[ $dns_update == *"\"success\":false"* ]]; then
-		echo "$(date): AAAA record update failed!"
+		echo "$(get_date): Updating AAAA record to ${ipv6} failed!"
 		return
 	fi
-	echo "$(date): AAAA record updated successfully!"
+	echo "$(get_date): Updating AAAA record to ${ipv6} was successful!"
+}
+
+get_date() {
+	echo $(date '+%Y-%m-%dT%T.%3N')
 }
 
 main () {
 	if [ "$event_log" == true ] ; then
-		filename=$(date '+%Y%m%d')
+		filename=$(date '+%Y-%m-%d')
 		if [ ! -e $dir/logs ]; then
     			mkdir $dir/logs
 		fi
 		if [ "$cloudflare_a_record" == true ] ; then
-        		a_record_update > $dir/logs/$filename.log
+        		a_record_update >> $dir/logs/$filename.log
 		fi
 		if [ "$cloudflare_aaaa_record" == true ] ; then
-        		aaaa_record_update > $dir/logs/$filename.log
+        		aaaa_record_update >> $dir/logs/$filename.log
 		fi
 	else
 		if [ "$cloudflare_a_record" == true ] ; then
