@@ -8,7 +8,6 @@ git clone https://github.com/dongcodebmt/cloudflare-ddns.git
 2. Edit `config.conf` and replace the values with your own.
 ```shell
 cloudflare_api_token=api_token              # Generate your token with Zone.DNS permission at: https://dash.cloudflare.com/profile/api-tokens
-cloudflare_zone_id=zone_id                  # The zone id you want to update
 cloudflare_record_name=home.example.com     # The record you want to update
 cloudflare_a_record=true                    # Set to false to disable update DNS record for IPv4
 cloudflare_aaaa_record=false                # Set to false to disable update DNS record for IPv6
