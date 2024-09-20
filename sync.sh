@@ -10,6 +10,9 @@ dir=`dirname $(readlink -f "$0")`
 #Regex ip from cloudflare cdn-cgi/trace
 ip_regex="((([0-9]{1,3}\.){3}[0-9]{1,3})|(([A-Fa-f0-9]{1,4}::?){1,7}[A-Fa-f0-9]{1,4}))"
 
+#Get cloudflare zone_id
+cloudflare_zone_id=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones?name=$(echo "$cloudflare_record_name" | awk -F\. '{print $(NF-1) FS $NF}')" -H "Authorization: Bearer $cloudflare_api_token" -H "Content-Type: application/json"| jq -r '.result[] | "\(.id)"')
+
 a_record_update () {
 	#Get ipv4
 	ipv4_request=$(curl -s -X GET https://1.1.1.1/cdn-cgi/trace)
