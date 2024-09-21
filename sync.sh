@@ -27,10 +27,16 @@ a_record_update () {
 	dns_record=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$cloudflare_zone_id/dns_records?type=A&name=$cloudflare_record_name" \
 		-H "Authorization: Bearer $cloudflare_api_token" \
 		-H "Content-Type: application/json")
-	if echo "$dns_record" | grep -q '"count":0'; then
-		echo "$(get_date): Please create A record with IP ${ipv4} for ${cloudflare_record_name}!"
-		return
-	fi
+    	if echo "$dns_record" | grep -q '"count":0'; then
+        	dns_add_record=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$cloudflare_zone_id/dns_records/" \
+            		-H "Authorization: Bearer $cloudflare_api_token" \
+            		-H "Content-Type: application/json" \
+            		--data "{\"type\":\"A\",\"name\":\"$(echo "$cloudflare_record_name" | awk -F\. '{print $(NF-2)}')\",\"content\":\"$ipv4\",\"ttl\":1,\"proxied\":false}")
+            		if echo "$dns_add_record" | grep -q '"success":true'; then
+                		echo "$(get_date): Create A record ${cloudflare_record_name}!"
+            		fi
+        	return
+    	fi
 	old_ipv4=$(echo $dns_record | sed -E "s/.*\"content\":\"($ip_regex)\".*/\1/")
 	if [ "$ipv4" = "$old_ipv4" ]; then
 		# echo "$(get_date): A record has not changed!"
@@ -58,10 +64,16 @@ aaaa_record_update () {
 	dns_record=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$cloudflare_zone_id/dns_records?type=AAAA&name=$cloudflare_record_name" \
 		-H "Authorization: Bearer $cloudflare_api_token" \
 		-H "Content-Type: application/json")
-	if echo "$dns_record" | grep -q '"count":0'; then
-		echo "$(get_date): Please create AAAA record with IP ${ipv6} for ${cloudflare_record_name}!"
-		return
-	fi
+    	if echo "$dns_record" | grep -q '"count":0'; then
+        	dns_add_record=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$cloudflare_zone_id/dns_records/" \
+            		-H "Authorization: Bearer $cloudflare_api_token" \
+            		-H "Content-Type: application/json" \
+            		--data "{\"type\":\"AAAA\",\"name\":\"$(echo "$cloudflare_record_name" | awk -F\. '{print $(NF-2)}')\",\"content\":\"$ipv6\",\"ttl\":1,\"proxied\":false}")
+            		if echo "$dns_add_record" | grep -q '"success":true'; then
+                		echo "$(get_date): Create AAAA record ${cloudflare_record_name}!"
+            		fi
+        	return
+    	fi
 	old_ipv6=$(echo $dns_record | sed -E "s/.*\"content\":\"($ip_regex)\".*/\1/")
 	if [ "$ipv6" = "$old_ipv6" ]; then
 		# echo "$(get_date): AAAA record has not change!"
