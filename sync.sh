@@ -3,7 +3,7 @@
 # Cloudflare DDNS
 # A bash script to update Cloudflare DNS
 
-dir=`dirname $(readlink -f "$0")`
+dir=$(dirname $(readlink -f "$0"))
 # Load config from config.conf
 . $dir/config.conf
 
@@ -14,33 +14,32 @@ ip_regex_v6="(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:
 #Get cloudflare zone_id
 cloudflare_zone_id=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones?name=$(echo "$cloudflare_record_name" | awk -F\. '{print $(NF-1) FS $NF}')" \
 	-H "Authorization: Bearer $cloudflare_api_token" \
-	-H "Content-Type: application/json" \
-	| grep -o '"id":"[^"]*' | sed 's/"id":"//' | head -n 1)
+	-H "Content-Type: application/json" |
+	grep -o '"id":"[^"]*' | sed 's/"id":"//' | head -n 1)
 
-a_record_update () {
+a_record_update() {
 	#Get ipv4
 	ipv4_request=$(curl -s -X GET https://1.1.1.1/cdn-cgi/trace)
 	ipv4=$(echo $ipv4_request | sed -E "s/.*ip=($ip_regex_v4).*/\1/")
 
-	if [ "$ipv4" = "" ];then
+	if [ "$ipv4" = "" ]; then
 		return
 	fi
 	dns_record=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$cloudflare_zone_id/dns_records?type=A&name=$cloudflare_record_name" \
 		-H "Authorization: Bearer $cloudflare_api_token" \
 		-H "Content-Type: application/json")
-    	if echo "$dns_record" | grep -q '"count":0'; then
-        	dns_add_record=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$cloudflare_zone_id/dns_records/" \
-            		-H "Authorization: Bearer $cloudflare_api_token" \
-            		-H "Content-Type: application/json" \
-            		--data "{\"type\":\"A\",\"name\":\"$(echo "$cloudflare_record_name" | awk -F\. '{print $(NF-2)}')\",\"content\":\"$ipv4\",\"ttl\":1,\"proxied\":false}")
-            		if echo "$dns_add_record" | grep -q '"success":true'; then
-                		echo "$(get_date): Create A record ${cloudflare_record_name}!"
-            		fi
-        	return
-    	fi
+	if echo "$dns_record" | grep -q '"count":0'; then
+		dns_add_record=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$cloudflare_zone_id/dns_records/" \
+			-H "Authorization: Bearer $cloudflare_api_token" \
+			-H "Content-Type: application/json" \
+			--data "{\"type\":\"A\",\"name\":\"$(echo "$cloudflare_record_name" | awk -F\. '{print $(NF-2)}')\",\"content\":\"$ipv4\",\"ttl\":1,\"proxied\":false}")
+		if echo "$dns_add_record" | grep -q '"success":true'; then
+			log "Create A record ${cloudflare_record_name}!"
+		fi
+		return
+	fi
 	old_ipv4=$(echo $dns_record | sed -E "s/.*\"content\":\"($ip_regex_v4)\".*/\1/")
 	if [ "$ipv4" = "$old_ipv4" ]; then
-		# echo "$(get_date): A record has not changed!"
 		return
 	fi
 	a_record_id=$(echo "$dns_record" | sed -E 's/.*"id":"(\w+)".*/\1/')
@@ -49,35 +48,34 @@ a_record_update () {
 		-H "Content-Type: application/json" \
 		--data "{\"type\":\"A\",\"name\":\"$cloudflare_record_name\",\"content\":\"$ipv4\",\"ttl\":1,\"proxied\":false}")
 	if echo "$dns_update" | grep -q '"success":false'; then
-		echo "$(get_date): Updating A record to ${ipv4} failed!"
+		log "Updating A record to ${ipv4} failed!"
 		return
 	fi
-	echo "$(get_date): Updating A record to ${ipv4} was successful!"
+	log "Updating A record to ${ipv4} was successful!"
 }
 
-aaaa_record_update () {
+aaaa_record_update() {
 	ipv6_request=$(curl -s -X GET https://[2606:4700:4700::1111]/cdn-cgi/trace)
 	ipv6=$(echo $ipv6_request | sed -E "s/.*ip=($ip_regex_v6).*/\1/")
 
-	if [ "$ipv6" = "" ];then
+	if [ "$ipv6" = "" ]; then
 		return
 	fi
 	dns_record=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones/$cloudflare_zone_id/dns_records?type=AAAA&name=$cloudflare_record_name" \
 		-H "Authorization: Bearer $cloudflare_api_token" \
 		-H "Content-Type: application/json")
-    	if echo "$dns_record" | grep -q '"count":0'; then
-        	dns_add_record=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$cloudflare_zone_id/dns_records/" \
-            		-H "Authorization: Bearer $cloudflare_api_token" \
-            		-H "Content-Type: application/json" \
-            		--data "{\"type\":\"AAAA\",\"name\":\"$(echo "$cloudflare_record_name" | awk -F\. '{print $(NF-2)}')\",\"content\":\"$ipv6\",\"ttl\":1,\"proxied\":false}")
-            		if echo "$dns_add_record" | grep -q '"success":true'; then
-                		echo "$(get_date): Create AAAA record ${cloudflare_record_name}!"
-            		fi
-        	return
-    	fi
+	if echo "$dns_record" | grep -q '"count":0'; then
+		dns_add_record=$(curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$cloudflare_zone_id/dns_records/" \
+			-H "Authorization: Bearer $cloudflare_api_token" \
+			-H "Content-Type: application/json" \
+			--data "{\"type\":\"AAAA\",\"name\":\"$(echo "$cloudflare_record_name" | awk -F\. '{print $(NF-2)}')\",\"content\":\"$ipv6\",\"ttl\":1,\"proxied\":false}")
+		if echo "$dns_add_record" | grep -q '"success":true'; then
+			log "Create AAAA record ${cloudflare_record_name}!"
+		fi
+		return
+	fi
 	old_ipv6=$(echo $dns_record | sed -E "s/.*\"content\":\"($ip_regex_v6)\".*/\1/")
 	if [ "$ipv6" = "$old_ipv6" ]; then
-		# echo "$(get_date): AAAA record has not change!"
 		return
 	fi
 	aaaa_record_id=$(echo "$dns_record" | sed -E 's/.*"id":"(\w+)".*/\1/')
@@ -86,39 +84,39 @@ aaaa_record_update () {
 		-H "Content-Type: application/json" \
 		--data "{\"type\":\"AAAA\",\"name\":\"$cloudflare_record_name\",\"content\":\"$ipv6\",\"ttl\":1,\"proxied\":false}")
 	if echo "$dns_update" | grep -q '"success":false'; then
-		echo "$(get_date): Updating AAAA record to ${ipv6} failed!"
+		log " Updating AAAA record to ${ipv6} failed!"
 		return
 	fi
-	echo "$(get_date): Updating AAAA record to ${ipv6} was successful!"
+	log "Updating AAAA record to ${ipv6} was successful!"
 }
 
-get_date() {
-	echo $(date '+%Y-%m-%dT%T.%3N')
+log() {
+	echo "$(date '+%Y-%m-%dT%T.%3N') - $1"
 }
 
-main () {
-	if [ "$event_log" = "true" ] ; then
-		filename=$(date '+%Y-%m-%d')
+main() {
+	if [ "$event_log" = "true" ]; then
+		filename=$(date '+%Y-%m')
 		if [ ! -e $dir/logs ]; then
-    			mkdir $dir/logs
+			mkdir $dir/logs
 		fi
-		if [ "$cloudflare_a_record" = "true" ] ; then
-        		a_res=$(a_record_update)
-                if [ -n "$a_res" ] ; then
-                    echo "$a_res" >> $dir/logs/$filename.log
-                fi
+		if [ "$cloudflare_a_record" = "true" ]; then
+			a_res=$(a_record_update)
+			if [ -n "$a_res" ]; then
+				echo "$a_res" >>$dir/logs/$filename.log
+			fi
 		fi
-		if [ "$cloudflare_aaaa_record" = "true" ] ; then
-        		aaaa_res=$(aaaa_record_update)
-                if [ -n "$aaaa_res" ] ; then
-                    echo "$aaaa_res" >> $dir/logs/$filename.log
-                fi
+		if [ "$cloudflare_aaaa_record" = "true" ]; then
+			aaaa_res=$(aaaa_record_update)
+			if [ -n "$aaaa_res" ]; then
+				echo "$aaaa_res" >>$dir/logs/$filename.log
+			fi
 		fi
 	else
-		if [ "$cloudflare_a_record" = "true" ] ; then
+		if [ "$cloudflare_a_record" = "true" ]; then
 			a_record_update
 		fi
-		if [ "$cloudflare_aaaa_record" = "true" ] ; then
+		if [ "$cloudflare_aaaa_record" = "true" ]; then
 			aaaa_record_update
 		fi
 	fi
