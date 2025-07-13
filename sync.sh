@@ -8,8 +8,7 @@ dir=$(dirname $(readlink -f "$0"))
 . $dir/config.conf
 
 #Regex ip from cloudflare cdn-cgi/trace
-ip_regex_v4="((([0-9]{1,3}\.){3}[0-9]{1,3})|(([A-Fa-f0-9]{1,4}::?){1,7}[A-Fa-f0-9]{1,4}))"
-ip_regex_v6="(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))"
+ip_regex="[0-9a-fA-F:.]+"
 
 #Get cloudflare zone_id
 cloudflare_zone_id=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones?name=$(echo "$cloudflare_record_name" | awk -F\. '{print $(NF-1) FS $NF}')" \
@@ -20,7 +19,7 @@ cloudflare_zone_id=$(curl -s -X GET "https://api.cloudflare.com/client/v4/zones?
 a_record_update() {
 	#Get ipv4
 	ipv4_request=$(curl -s -X GET https://1.1.1.1/cdn-cgi/trace)
-	ipv4=$(echo $ipv4_request | sed -E "s/.*ip=($ip_regex_v4).*/\1/")
+	ipv4=$(echo $ipv4_request | sed -E "s/.*ip=($ip_regex).*/\1/")
 
 	if [ "$ipv4" = "" ]; then
 		return
@@ -38,7 +37,7 @@ a_record_update() {
 		fi
 		return
 	fi
-	old_ipv4=$(echo $dns_record | sed -E "s/.*\"content\":\"($ip_regex_v4)\".*/\1/")
+	old_ipv4=$(echo $dns_record | sed -E "s/.*\"content\":\"($ip_regex)\".*/\1/")
 	if [ "$ipv4" = "$old_ipv4" ]; then
 		return
 	fi
@@ -56,7 +55,7 @@ a_record_update() {
 
 aaaa_record_update() {
 	ipv6_request=$(curl -s -X GET https://[2606:4700:4700::1111]/cdn-cgi/trace)
-	ipv6=$(echo $ipv6_request | sed -E "s/.*ip=($ip_regex_v6).*/\1/")
+	ipv6=$(echo $ipv6_request | sed -E "s/.*ip=($ip_regex).*/\1/")
 
 	if [ "$ipv6" = "" ]; then
 		return
@@ -74,7 +73,7 @@ aaaa_record_update() {
 		fi
 		return
 	fi
-	old_ipv6=$(echo $dns_record | sed -E "s/.*\"content\":\"($ip_regex_v6)\".*/\1/")
+	old_ipv6=$(echo $dns_record | sed -E "s/.*\"content\":\"($ip_regex)\".*/\1/")
 	if [ "$ipv6" = "$old_ipv6" ]; then
 		return
 	fi
